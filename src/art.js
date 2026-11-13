@@ -302,9 +302,10 @@ art.skins = [
   { id: 'robot', name: 'Robo', price: 900, colors: fur(P.silver, P.white, P.grey, P.steel, P.grey, P.red, P.cyan, { o: P.charcoal, n: P.red, j: P.gold, J: P.yellow, K: P.rust, v: P.grey, u: P.steel }) },
   { id: 'ghost', name: 'Ghost', price: 1200, colors: fur(P.cyan, P.white, P.sky, P.sky, P.white, P.pink, P.blue, { o: P.navy, j: P.purple, J: P.plum, K: P.indigo, y: P.cyan }) },
   { id: 'void', name: 'Void', price: 1600, colors: fur(P.indigo, P.purple, P.dark, P.navy, P.indigo, P.magenta, P.yellow, { o: P.dark, k: P.gold, x: P.purple, n: P.magenta, j: P.gold, J: P.yellow, K: P.rust, y: P.white }) },
-  { id: 'golden', name: 'Golden', price: 2500, colors: fur(P.gold, P.yellow, P.orange, P.ginger, P.yellow, P.peach, P.red, { o: P.rust, j: P.red, J: P.pink, K: P.darkred }) }
+  { id: 'golden', name: 'Golden', price: 2500, colors: fur(P.gold, P.yellow, P.orange, P.ginger, P.yellow, P.peach, P.red, { o: P.rust, j: P.red, J: P.pink, K: P.darkred }) },
+  { id: 'spin', name: 'Spin Cat', price: 5000, spin: true, colors: fur(P.white, P.cream, P.sand, P.silver, P.white, P.pink, P.cyan, { o: P.charcoal, u: P.charcoal, v: P.orange }) }
 ];
-art.skins.forEach((s) => def('cat_' + s.id, catFrames.map(rows), s.colors, { anchor: { x: 14, y: 14 } }));
+art.skins.forEach((s) => def('cat_' + s.id, catFrames.map(rows), s.colors, { anchor: { x: 14, y: 14 }, spin: !!s.spin }));
 art.CAT = {
   w: CW, h: CH,
   frames: { fly: [0, 1, 2, 3], dash: [4, 5], parry: [6, 7, 8], hurt: [9], shoot: [10, 11], ko: [12], idle: [13, 14, 15, 16] },

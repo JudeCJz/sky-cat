@@ -497,7 +497,7 @@ function spriteDefine(name, frames, colors, opts) {
   const an = (opts && opts.anchor) || null;
   const anchor = { x: an ? Math.round(an.x) : 0, y: an ? Math.round(an.y) : 0 };
   const info = { w: w, h: h, count: frames.length, anchor: anchor };
-  sprites[name] = { w: w, h: h, count: frames.length, ax: anchor.x, ay: anchor.y, fr: fr, info: info };
+  sprites[name] = { w: w, h: h, count: frames.length, ax: anchor.x, ay: anchor.y, fr: fr, info: info, spin: !!(opts && opts.spin) };
   return info;
 }
 
@@ -529,6 +529,18 @@ function silhouette(fr, key, color, flip, w, h) {
 }
 
 function spriteDraw(name, frame, x, y, o) {
+  const s = sprites[name];
+  if (s && s.spin) {
+    // spinning meme cat: rotate the whole sprite about its centre
+    const cx = Math.round(x) - s.ax + s.w / 2, cy = Math.round(y) - s.ay + s.h / 2;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate((SC.frame || 0) * 0.32); ctx.translate(-cx, -cy);
+    spriteDraw2(name, frame, x, y, o);
+    ctx.restore();
+    return;
+  }
+  spriteDraw2(name, frame, x, y, o);
+}
+function spriteDraw2(name, frame, x, y, o) {
   const s = sprites[name];
   if (!s) {
     if (!warned[name]) { warned[name] = true; if (window.console) console.warn('missing sprite: ' + name); }

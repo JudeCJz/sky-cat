@@ -1437,6 +1437,11 @@ function finishRun() {
     maxCombo: run.maxCombo, coins: total, best: M.max(run.bestBefore, run.score), newBest, missionsDone: missions.done.slice(), time: M.round(run.f / 60),
     streakBonus: sk.bonus, streakDay: sk.day, goal: run.goal ? { text: run.goal.text, done: !!run.goal.done } : null,
     bestBefore: run.bestBefore };
+  try {
+    const h = SC.store.get('history', []) || [];
+    h.unshift({ t: Date.now(), score: run.score, wave: run.wave, kos: run.kos, coins: total, time: res.time, skin: run.skin });
+    SC.store.set('history', h.slice(0, 50));
+  } catch (err) {}
   let rank = null;
   try {
     if (SC.net && SC.net.submit) rank = SC.net.submit({ mode: 'endless', score: run.score, wave: run.wave, kos: run.kos, time: M.round(run.f / 60) });

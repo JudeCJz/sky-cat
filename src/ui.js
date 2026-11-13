@@ -491,7 +491,7 @@
   }
 
   SC.scene('title', {
-    enter() { ui.resetFocus(); SC.music.play('title'); bat = 0; },
+    enter() { ui.resetFocus(); SC.music.play('title'); bat = 0; lbLoad(); },
     update() { scroll += 0.9 * SC.dt; bat++; batEvents(bat % BAT); },
     draw() {
       drawCycleBG(scroll);
@@ -507,6 +507,7 @@
       if (ui.button('play', bx, y, bw, bh, 'PLAY', { icon: 'ic_play', color: C.gold, small: true })) go = 'play'; y += bh + gap;
       if (ui.button('board', bx, y, bw, bh, 'LEADERBOARD', { icon: 'ic_trophy', small: true })) go = 'leaderboard'; y += bh + gap;
       if (ui.button('hangar', bx, y, bw, bh, 'HANGAR', { icon: 'ic_hangar', small: true })) go = 'hangar'; y += bh + gap;
+      if (ui.button('history', bx, y, bw, bh, 'HISTORY', { icon: 'ic_target', small: true })) go = 'history'; y += bh + gap;
       if (ui.button('howto', bx, y, bw, bh, 'HOW TO PLAY', { icon: 'ic_info', small: true })) go = 'howto'; y += bh + gap;
       if (ui.button('settings', bx, y, bw, bh, 'SETTINGS', { icon: 'ic_gear', small: true })) go = 'settings';
       // quick audio toggles
@@ -534,15 +535,18 @@
         iy += 10;
       });
       iy += 3;
-      SC.text('MISSIONS', px + 8, iy, { color: C.cyan }); iy += 10;
-      missions().slice(0, 3).forEach(m => {
-        const done = m.progress >= m.goal;
-        SC.text(fitText(m.text || '', pw - 16, 1), px + 8, iy, { color: done ? C.good : '#ffffff' });
-        iy += 9;
-        ui.bar(px + 8, iy, pw - 54, 4, m.goal ? m.progress / m.goal : 0, done ? C.good : C.cyan);
-        SC.text(Math.min(m.progress, m.goal) + '/' + m.goal, W - 8, iy - 2, { align: 'right', color: C.dim });
-        iy += 8;
+      SC.text('LEADERBOARD', px + 8, iy, { color: C.gold });
+      SC.text(lb.state === 'offline' ? 'OFFLINE' : (lb.state === 'loading' ? '...' : ''), W - 8, iy, { align: 'right', color: C.dim });
+      iy += 11;
+      const tops = (lb.data && lb.data.entries) || [], myId2 = SC.net && SC.net.id;
+      tops.slice(0, 5).forEach(e => {
+        const mine = myId2 && e.id === myId2;
+        SC.text(String(e.rank), px + 8, iy, { color: RK_COL[e.rank - 1] || C.dim });
+        SC.text(fitText(String(e.name || '???'), 78, 1), px + 22, iy, { color: mine ? C.gold : (RK_COL[e.rank - 1] || '#ffffff') });
+        SC.text(String(e.score), W - 8, iy, { align: 'right', color: '#ffffff' });
+        iy += 10;
       });
+      if (lb.state === 'ok' && !tops.length) SC.text('NO SCORES YET', px + 8, iy, { color: C.dim });
       bottomBand();
       let hx = 12;
       hx += ui.prompt(hx, 250, 'confirm', 'SELECT') + 14;
@@ -980,6 +984,46 @@
     spr(nm, 0, x - (hx - 6) + an.x, y - (hy - 1) + an.y);
     ctx.restore();
   }
+  // ---------- HISTORY (this device's last runs) ----------
+  let hiScroll = 0;
+  SC.scene('history', {
+    enter() { ui.resetFocus(); hiScroll = 0; SC.music.play('title'); },
+    update() { scroll += 0.5 * SC.dt; },
+    draw() {
+      ui.lockV = true;
+      const I = inp();
+      drawBG(2, scroll);
+      ui.band(0, 240, 'rgba(8,10,24,0.78)');
+      title3('HISTORY', 12, 6, 'ic_target');
+      const h = store.get('history', []) || [];
+      const ROWS = 15, RH = 12, ly = 50, maxS = Math.max(0, h.length - ROWS);
+      SC.text('YOUR LAST RUNS', 12, 34, { color: C.gold });
+      SC.text(h.length + ' SAVED', W - 12, 34, { align: 'right', color: C.dim });
+      SC.rect(10, 44, W - 20, 1, 'rgba(255,255,255,0.15)');
+      let d = 0;
+      if (I.pressed('up')) d -= 1;
+      if (I.pressed('down')) d += 1;
+      if (I.takeWheel) d += Math.round(I.takeWheel() / 60);
+      hiScroll = clampN(hiScroll + d, 0, maxS);
+      const best = h.reduce((m, r) => Math.max(m, r.score || 0), 0);
+      for (let i = 0; i < ROWS; i++) {
+        const r = h[hiScroll + i];
+        if (!r) break;
+        const y = ly + i * RH, dt = new Date(r.t || 0);
+        if ((i & 1) === 0) SC.rect(10, y - 1, W - 20, RH, 'rgba(255,255,255,0.04)');
+        SC.text(String(hiScroll + i + 1), 14, y + 1, { color: C.dim });
+        SC.text((dt.getMonth() + 1) + '/' + dt.getDate() + ' ' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0'), 40, y + 1, { color: C.dim });
+        SC.text('WAVE ' + r.wave, 150, y + 1, { color: '#ffffff' });
+        SC.text(r.kos + ' KOS', 230, y + 1, { color: C.dim });
+        SC.text(String(r.score), 420, y + 1, { align: 'right', color: r.score === best ? C.gold : '#ffffff' });
+      }
+      if (!h.length) SC.text('NO RUNS YET', W / 2, 120, { align: 'center', color: C.dim, scale: 2 });
+      bottomBand();
+      if (ui.button('back', 8, 246, 70, 17, 'BACK', { icon: 'ic_back', small: true, hotkey: 'back', silent: true })) { sfx('back'); SC.go('title', {}); }
+      fxLayer();
+    }
+  });
+
   SC.scene('leaderboard', {
     enter() { ui.resetFocus(); lbScroll = 0; lbDrag = null; SC.music.play('title'); lbLoad(); },
     update() { scroll += 0.5 * SC.dt; },

@@ -511,7 +511,7 @@ function spriteDefine(name, frames, colors, opts) {
   const an = (opts && opts.anchor) || null;
   const anchor = { x: an ? Math.round(an.x) : 0, y: an ? Math.round(an.y) : 0 };
   const info = { w: w, h: h, count: frames.length, anchor: anchor };
-  sprites[name] = { w: w, h: h, count: frames.length, ax: anchor.x, ay: anchor.y, fr: fr, info: info };
+  sprites[name] = { w: w, h: h, count: frames.length, ax: anchor.x, ay: anchor.y, fr: fr, info: info, spin: !!(opts && opts.spin) };
   return info;
 }
 
@@ -543,6 +543,18 @@ function silhouette(fr, key, color, flip, w, h) {
 }
 
 function spriteDraw(name, frame, x, y, o) {
+  const s = sprites[name];
+  if (s && s.spin) {
+    // spinning meme cat: rotate the whole sprite about its centre
+    const cx = Math.round(x) - s.ax + s.w / 2, cy = Math.round(y) - s.ay + s.h / 2;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate((SC.frame || 0) * 0.32); ctx.translate(-cx, -cy);
+    spriteDraw2(name, frame, x, y, o);
+    ctx.restore();
+    return;
+  }
+  spriteDraw2(name, frame, x, y, o);
+}
+function spriteDraw2(name, frame, x, y, o) {
   const s = sprites[name];
   if (!s) {
     if (!warned[name]) { warned[name] = true; if (window.console) console.warn('missing sprite: ' + name); }
@@ -1692,9 +1704,10 @@ art.skins = [
   { id: 'robot', name: 'Robo', price: 900, colors: fur(P.silver, P.white, P.grey, P.steel, P.grey, P.red, P.cyan, { o: P.charcoal, n: P.red, j: P.gold, J: P.yellow, K: P.rust, v: P.grey, u: P.steel }) },
   { id: 'ghost', name: 'Ghost', price: 1200, colors: fur(P.cyan, P.white, P.sky, P.sky, P.white, P.pink, P.blue, { o: P.navy, j: P.purple, J: P.plum, K: P.indigo, y: P.cyan }) },
   { id: 'void', name: 'Void', price: 1600, colors: fur(P.indigo, P.purple, P.dark, P.navy, P.indigo, P.magenta, P.yellow, { o: P.dark, k: P.gold, x: P.purple, n: P.magenta, j: P.gold, J: P.yellow, K: P.rust, y: P.white }) },
-  { id: 'golden', name: 'Golden', price: 2500, colors: fur(P.gold, P.yellow, P.orange, P.ginger, P.yellow, P.peach, P.red, { o: P.rust, j: P.red, J: P.pink, K: P.darkred }) }
+  { id: 'golden', name: 'Golden', price: 2500, colors: fur(P.gold, P.yellow, P.orange, P.ginger, P.yellow, P.peach, P.red, { o: P.rust, j: P.red, J: P.pink, K: P.darkred }) },
+  { id: 'spin', name: 'Spin Cat', price: 5000, spin: true, colors: fur(P.white, P.cream, P.sand, P.silver, P.white, P.pink, P.cyan, { o: P.charcoal, u: P.charcoal, v: P.orange }) }
 ];
-art.skins.forEach((s) => def('cat_' + s.id, catFrames.map(rows), s.colors, { anchor: { x: 14, y: 14 } }));
+art.skins.forEach((s) => def('cat_' + s.id, catFrames.map(rows), s.colors, { anchor: { x: 14, y: 14 }, spin: !!s.spin }));
 art.CAT = {
   w: CW, h: CH,
   frames: { fly: [0, 1, 2, 3], dash: [4, 5], parry: [6, 7, 8], hurt: [9], shoot: [10, 11], ko: [12], idle: [13, 14, 15, 16] },
@@ -4420,7 +4433,7 @@ art.sticks = [
   }
 
   SC.scene('title', {
-    enter() { ui.resetFocus(); SC.music.play('title'); bat = 0; },
+    enter() { ui.resetFocus(); SC.music.play('title'); bat = 0; lbLoad(); },
     update() { scroll += 0.9 * SC.dt; bat++; batEvents(bat % BAT); },
     draw() {
       drawCycleBG(scroll);
@@ -4436,6 +4449,7 @@ art.sticks = [
       if (ui.button('play', bx, y, bw, bh, 'PLAY', { icon: 'ic_play', color: C.gold, small: true })) go = 'play'; y += bh + gap;
       if (ui.button('board', bx, y, bw, bh, 'LEADERBOARD', { icon: 'ic_trophy', small: true })) go = 'leaderboard'; y += bh + gap;
       if (ui.button('hangar', bx, y, bw, bh, 'HANGAR', { icon: 'ic_hangar', small: true })) go = 'hangar'; y += bh + gap;
+      if (ui.button('history', bx, y, bw, bh, 'HISTORY', { icon: 'ic_target', small: true })) go = 'history'; y += bh + gap;
       if (ui.button('howto', bx, y, bw, bh, 'HOW TO PLAY', { icon: 'ic_info', small: true })) go = 'howto'; y += bh + gap;
       if (ui.button('settings', bx, y, bw, bh, 'SETTINGS', { icon: 'ic_gear', small: true })) go = 'settings';
       // quick audio toggles
@@ -4463,15 +4477,18 @@ art.sticks = [
         iy += 10;
       });
       iy += 3;
-      SC.text('MISSIONS', px + 8, iy, { color: C.cyan }); iy += 10;
-      missions().slice(0, 3).forEach(m => {
-        const done = m.progress >= m.goal;
-        SC.text(fitText(m.text || '', pw - 16, 1), px + 8, iy, { color: done ? C.good : '#ffffff' });
-        iy += 9;
-        ui.bar(px + 8, iy, pw - 54, 4, m.goal ? m.progress / m.goal : 0, done ? C.good : C.cyan);
-        SC.text(Math.min(m.progress, m.goal) + '/' + m.goal, W - 8, iy - 2, { align: 'right', color: C.dim });
-        iy += 8;
+      SC.text('LEADERBOARD', px + 8, iy, { color: C.gold });
+      SC.text(lb.state === 'offline' ? 'OFFLINE' : (lb.state === 'loading' ? '...' : ''), W - 8, iy, { align: 'right', color: C.dim });
+      iy += 11;
+      const tops = (lb.data && lb.data.entries) || [], myId2 = SC.net && SC.net.id;
+      tops.slice(0, 5).forEach(e => {
+        const mine = myId2 && e.id === myId2;
+        SC.text(String(e.rank), px + 8, iy, { color: RK_COL[e.rank - 1] || C.dim });
+        SC.text(fitText(String(e.name || '???'), 78, 1), px + 22, iy, { color: mine ? C.gold : (RK_COL[e.rank - 1] || '#ffffff') });
+        SC.text(String(e.score), W - 8, iy, { align: 'right', color: '#ffffff' });
+        iy += 10;
       });
+      if (lb.state === 'ok' && !tops.length) SC.text('NO SCORES YET', px + 8, iy, { color: C.dim });
       bottomBand();
       let hx = 12;
       hx += ui.prompt(hx, 250, 'confirm', 'SELECT') + 14;
@@ -4909,6 +4926,46 @@ art.sticks = [
     spr(nm, 0, x - (hx - 6) + an.x, y - (hy - 1) + an.y);
     ctx.restore();
   }
+  // ---------- HISTORY (this device's last runs) ----------
+  let hiScroll = 0;
+  SC.scene('history', {
+    enter() { ui.resetFocus(); hiScroll = 0; SC.music.play('title'); },
+    update() { scroll += 0.5 * SC.dt; },
+    draw() {
+      ui.lockV = true;
+      const I = inp();
+      drawBG(2, scroll);
+      ui.band(0, 240, 'rgba(8,10,24,0.78)');
+      title3('HISTORY', 12, 6, 'ic_target');
+      const h = store.get('history', []) || [];
+      const ROWS = 15, RH = 12, ly = 50, maxS = Math.max(0, h.length - ROWS);
+      SC.text('YOUR LAST RUNS', 12, 34, { color: C.gold });
+      SC.text(h.length + ' SAVED', W - 12, 34, { align: 'right', color: C.dim });
+      SC.rect(10, 44, W - 20, 1, 'rgba(255,255,255,0.15)');
+      let d = 0;
+      if (I.pressed('up')) d -= 1;
+      if (I.pressed('down')) d += 1;
+      if (I.takeWheel) d += Math.round(I.takeWheel() / 60);
+      hiScroll = clampN(hiScroll + d, 0, maxS);
+      const best = h.reduce((m, r) => Math.max(m, r.score || 0), 0);
+      for (let i = 0; i < ROWS; i++) {
+        const r = h[hiScroll + i];
+        if (!r) break;
+        const y = ly + i * RH, dt = new Date(r.t || 0);
+        if ((i & 1) === 0) SC.rect(10, y - 1, W - 20, RH, 'rgba(255,255,255,0.04)');
+        SC.text(String(hiScroll + i + 1), 14, y + 1, { color: C.dim });
+        SC.text((dt.getMonth() + 1) + '/' + dt.getDate() + ' ' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0'), 40, y + 1, { color: C.dim });
+        SC.text('WAVE ' + r.wave, 150, y + 1, { color: '#ffffff' });
+        SC.text(r.kos + ' KOS', 230, y + 1, { color: C.dim });
+        SC.text(String(r.score), 420, y + 1, { align: 'right', color: r.score === best ? C.gold : '#ffffff' });
+      }
+      if (!h.length) SC.text('NO RUNS YET', W / 2, 120, { align: 'center', color: C.dim, scale: 2 });
+      bottomBand();
+      if (ui.button('back', 8, 246, 70, 17, 'BACK', { icon: 'ic_back', small: true, hotkey: 'back', silent: true })) { sfx('back'); SC.go('title', {}); }
+      fxLayer();
+    }
+  });
+
   SC.scene('leaderboard', {
     enter() { ui.resetFocus(); lbScroll = 0; lbDrag = null; SC.music.play('title'); lbLoad(); },
     update() { scroll += 0.5 * SC.dt; },
@@ -6701,6 +6758,11 @@ function finishRun() {
     maxCombo: run.maxCombo, coins: total, best: M.max(run.bestBefore, run.score), newBest, missionsDone: missions.done.slice(), time: M.round(run.f / 60),
     streakBonus: sk.bonus, streakDay: sk.day, goal: run.goal ? { text: run.goal.text, done: !!run.goal.done } : null,
     bestBefore: run.bestBefore };
+  try {
+    const h = SC.store.get('history', []) || [];
+    h.unshift({ t: Date.now(), score: run.score, wave: run.wave, kos: run.kos, coins: total, time: res.time, skin: run.skin });
+    SC.store.set('history', h.slice(0, 50));
+  } catch (err) {}
   let rank = null;
   try {
     if (SC.net && SC.net.submit) rank = SC.net.submit({ mode: 'endless', score: run.score, wave: run.wave, kos: run.kos, time: M.round(run.f / 60) });
