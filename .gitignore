@@ -1,0 +1,7 @@
+server/node_modules/
+server/.wrangler/
+original/goal.json
+original/MEMORY.md
+__pycache__/
+*.log
+.DS_Store

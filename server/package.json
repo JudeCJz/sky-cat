@@ -1,0 +1,15 @@
+{
+  "name": "sky-cat-leaderboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Global leaderboard Worker for the Sky Cat browser game",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "deploy": "wrangler deploy",
+    "schema:local": "wrangler d1 execute sky_cat_lb --local --file=schema.sql",
+    "schema:remote": "wrangler d1 execute sky_cat_lb --remote --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

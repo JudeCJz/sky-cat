@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS scores (
+  id    TEXT NOT NULL,
+  mode  TEXT NOT NULL,
+  day   TEXT NOT NULL,
+  name  TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  wave  INTEGER NOT NULL DEFAULT 0,
+  kos   INTEGER NOT NULL DEFAULT 0,
+  time  INTEGER NOT NULL DEFAULT 0,
+  skin  TEXT NOT NULL DEFAULT 'ginger',
+  ts    INTEGER NOT NULL,
+  PRIMARY KEY (id, mode, day)
+);
+CREATE INDEX IF NOT EXISTS idx_scores_board ON scores (mode, day, score DESC, ts ASC);
+
+CREATE TABLE IF NOT EXISTS rate (
+  id TEXT PRIMARY KEY,
+  ts INTEGER NOT NULL
+);

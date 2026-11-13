@@ -1,0 +1,8 @@
+name = "sky-cat-leaderboard"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sky_cat_lb"
+database_id = "187d5839-1106-4635-ada3-2dc844c8eee1"
